@@ -1,0 +1,189 @@
+---
+title: "Data Mining Project"
+author: "Khalid"
+output: pdf_document
+header-includes:
+  - \usepackage{lscape}
+  - \geometry{landscape}
+geometry: margin=1in, landscape
+---
+
+# Data Mining Project
+
+### 1. Open file in R
+
+```{r}
+data <- read.csv("/visa_number_in_japan.csv")
+```
+
+### 2. Look into the content of the data
+
+```{r}
+str(data)
+```
+
+### 3. Data Cleaning
+
+#### 3.1 Separate the data into their respective year and country
+
+```{r}
+years <- unique(data$Year)
+countries <- unique(data$Country)
+
+for (year in years) {
+  assign(paste0("data_", year), subset(data, Year == year))
+}
+
+for (country in countries) {
+  country_name <- gsub("[^a-zA-Z0-9]", "_", country)
+  assign(paste0("data_", country_name), subset(data, Country == country))
+}
+
+ls(pattern = "data_")
+```
+
+##### The data is divided into their respective object
+
+##### To check the object
+
+```{r}
+str(data_2006)
+head(data_2006)
+```
+
+```{r}
+str(data_Afghanistan)
+head(data_Afghanistan)
+```
+
+### 4. Data Analysis
+
+#### 4.1 The total number of issued for each of the country through out the years
+
+##### Example: Malaysia
+
+```{r}
+library(ggplot2)
+
+Malaysia_data <- subset(data, Country == "Malaysia")
+
+Malaysia_data$Year <- as.numeric(Malaysia_data$Year)
+Malaysia_data$Number.of.issued <- as.numeric(Malaysia_data$Number.of.issued)
+
+ggplot(Malaysia_data, aes(x = Year, y = Number.of.issued)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(title = "Number of Visas Issued for Malaysia (2006-2017)",
+       x = "Year",
+       y = "Number of Visas Issued") +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(2006, 2017, 1)) +
+  scale_y_continuous(labels = scales::comma)
+```
+
+#### 4.2 The total number of issued for each of the country in a specific year
+
+##### Example: 2006
+
+```{r}
+library(ggplot2)
+
+data_2006 <- subset(data, Year == 2006)
+
+data_2006$Number.of.issued <- as.numeric(data_2006$Number.of.issued)
+
+top_10_countries <- data_2006[order(-data_2006$Number.of.issued), ][1:10, ]
+
+ggplot(top_10_countries, aes(x = reorder(Country, -Number.of.issued), y = Number.of.issued, fill = Country)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = rainbow(10)) +
+  labs(title = "Top 10 Countries by Number of Visas Issued in 2006",
+       x = "Country",
+       y = "Number of Visas Issued") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(labels = scales::comma)
+```
+
+##### Example: 2017
+
+```{r}
+library(ggplot2)
+
+data_2017 <- subset(data, Year == 2017)
+
+data_2017$Number.of.issued <- as.numeric(data_2017$Number.of.issued)
+
+top_10_countries <- data_2017[order(-data_2017$Number.of.issued), ][1:10, ]
+
+ggplot(top_10_countries, aes(x = reorder(Country, -Number.of.issued), y = Number.of.issued, fill = Country)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = rainbow(10)) +
+  labs(title = "Top 10 Countries by Number of Visas Issued in 2017",
+       x = "Country",
+       y = "Number of Visas Issued") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(labels = scales::comma)
+```
+
+#### 4.3 The total number of issued for each year through out the dataset
+
+```{r}
+library(dplyr)
+
+data_summary <- data %>% group_by(Year) %>% summarise(total_issues = sum(Number.of.issued, na.rm = TRUE))
+
+ggplot(data_summary, aes(x = factor(Year), y = total_issues)) +
+  geom_line(group = 1, color = "red", size = 1) +
+  geom_point(color = "blue", size = 3) +
+  labs(title = "Total Issues by Year", x = "Year", y = "Total Issues") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### 5. Time Series Analysis
+
+#### 5.1 Preprocessing
+
+```{r}
+library(dplyr)
+
+data_summary <- data %>% group_by(Year) %>% summarise(total_issues = sum(Number.of.issued, na.rm = TRUE))
+
+print(data_summary)
+```
+
+#### 5.2 Time Series Plot
+
+```{r}
+library(ggplot2)
+
+ggplot(data_summary, aes(x = Year, y = total_issues)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(title = "Total Issues Over Time", x = "Year", y = "Total Issues") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+#### 5.3 Time Series Decomposition
+
+```{r}
+total_issues_ts <- ts(data_summary$total_issues, start = min(data_summary$Year), frequency = 1)
+
+print(total_issues_ts)
+```
+
+#### 5.4 Modeling with ARIMA
+
+```{r}
+
+library(forecast)
+
+arima_model <- auto.arima(total_issues_ts)
+
+forecasted_values <- forecast(arima_model, h = 5)
+
+plot(forecasted_values)
+```
