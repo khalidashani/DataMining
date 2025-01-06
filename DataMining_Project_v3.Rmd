@@ -9,7 +9,7 @@ geometry: margin=1in, landscape
 ---
 
 ```{r}
-booking_data <- read.csv("C:\\Users\\Khalid Laptop\\Desktop\\Data Mining Project\\data2\\Passanger_booking_data.csv")
+booking_data <- read.csv("Passanger_booking_data.csv")
 ```
 
 ## We would like to know if we should offer extra baggage for the package we offer
