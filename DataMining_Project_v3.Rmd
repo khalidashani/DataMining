@@ -1,0 +1,92 @@
+---
+title: "Data Mining Project v2"
+author: "Khalid"
+output: pdf_document
+header-includes:
+  - \usepackage{lscape}
+  - \geometry{landscape}
+geometry: margin=1in, landscape
+---
+
+```{r}
+booking_data <- read.csv("C:\\Users\\Khalid Laptop\\Desktop\\Data Mining Project\\data2\\Passanger_booking_data.csv")
+```
+
+## We would like to know if we should offer extra baggage for the package we offer
+
+### In "length_of_stay column" there are too many variation, the unique values are dividend into 9 groups:
+
+```{r}
+unique(booking_data$length_of_stay)
+
+library(dplyr)
+
+booking_data <- booking_data %>% mutate(
+    length_of_stay_group = cut(
+      length_of_stay,
+      breaks = 9,
+      labels = paste0("Group ", 1:9),
+      include.lowest = TRUE)
+  )
+
+unique(booking_data$length_of_stay_group)
+```
+
+#### what is the likelihood for the customer to ask for extra baggage?
+
+```{r}
+# load the library needed for this analysis
+library(dplyr)
+library(arules)
+library(arulesViz)
+
+# make a new data frame containing the column of interest
+transaction_data <- booking_data %>% select(num_passengers, sales_channel, wants_extra_baggage, trip_type, length_of_stay_group)
+
+#converting the column into factor
+transaction_data$num_passengers <- as.factor(transaction_data$num_passengers)
+transaction_data$sales_channel <- as.factor(transaction_data$sales_channel)
+transaction_data$wants_extra_baggage <- as.factor(transaction_data$wants_extra_baggage)
+transaction_data$trip_type <- as.factor(transaction_data$trip_type)
+transaction_data$length_of_stay_group <- as.factor(transaction_data$length_of_stay_group)
+
+# check the factor levels for "wants_extra_baggage"
+unique(transaction_data$wants_extra_baggage)
+
+# convert the level to Yes and No
+transaction_data$wants_extra_baggage <- factor(transaction_data$wants_extra_baggage, levels = c(0, 1), labels = c("No", "Yes"))
+
+# check the factor levels for "wants_extra_baggage" again
+unique(transaction_data$wants_extra_baggage)
+
+# convert the data frame in transaction format
+transactions <- as(transaction_data, "transactions")
+
+# verify the content of the data frame
+itemLabels(transactions)
+
+# apriori algorithm
+rules <- apriori(
+  transactions, # the data
+  parameter = list(supp = 0.1, conf = 0.1), # parameter
+  appearance = list(rhs = c("wants_extra_baggage=Yes", "wants_extra_baggage=No")) #the rhs
+)
+
+# inspect and visualize the rules
+inspect(head(rules, 10))
+plot(rules, method = "graph")
+```
+
+### Let see the highest support and confidence value
+
+```{r}
+# sort by support
+rules_sorted_supp <- sort(rules, by = "support", decreasing = TRUE)
+inspect(head(rules_sorted_supp, 5))
+```
+
+```{r}
+# Sort by confidence
+rules_sorted_conf <- sort(rules, by = "confidence", decreasing = TRUE)
+inspect(head(rules_sorted_conf, 5))
+```
